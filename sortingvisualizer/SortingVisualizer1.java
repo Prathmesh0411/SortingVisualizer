@@ -1,17 +1,19 @@
 import java.awt.*;
+import java.awt.event.*;
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.event.*;
 import java.util.Arrays;
 import java.util.Random;
 
 public class SortingVisualizer extends JPanel {
     private int[] array;
     private int delay = 50;
+    private int barWidth = 10;
     private int comparisons = 0;
     private int swaps = 0;
-    private int barWidth = 10;
+    private String timeComplexity = "";
     private Thread sortThread;
+    private boolean isSorted = false;
 
     public SortingVisualizer(int[] inputArray) {
         array = Arrays.copyOf(inputArray, inputArray.length);
@@ -24,16 +26,35 @@ public class SortingVisualizer extends JPanel {
         int height = getHeight();
         int barSpacing = 2;
 
-        for (int i = 0; i < array.length; i++) {
-            int barHeight = array[i] * 4; // Scaling for visualization
-            int x = i * (barWidth + barSpacing);
-            int y = height - barHeight;
+        // Total width occupied by all bars
+        int totalWidth = array.length * (barWidth + barSpacing) - barSpacing;
 
+        // Centering bars
+        int startX = (width - totalWidth) / 2;
+
+        for (int i = 0; i < array.length; i++) {
+            int barHeight = array[i] * 4; // Scaling bar height
+            int x = startX + i * (barWidth + barSpacing);
+            int y = height - barHeight - 70; // Adding space for stats
+
+            // Draw bars
             g.setColor(Color.GREEN);
             g.fillRect(x, y, barWidth, barHeight);
             g.setColor(Color.BLACK);
             g.drawRect(x, y, barWidth, barHeight);
+
+            // Draw numbers on top of bars
+            g.setColor(Color.BLACK);
+            String value = String.valueOf(array[i]);
+            int stringWidth = g.getFontMetrics().stringWidth(value);
+            g.drawString(value, x + (barWidth - stringWidth) / 2, y - 5);
         }
+
+        // Show stats and time complexity at the bottom
+        g.setColor(Color.BLACK);
+        g.drawString("Comparisons: " + comparisons, 10, height - 50);
+        g.drawString("Swaps: " + swaps, 10, height - 35);
+        g.drawString("Time Complexity: " + timeComplexity, 10, height - 20);
     }
 
     private void swap(int i, int j) {
@@ -53,7 +74,9 @@ public class SortingVisualizer extends JPanel {
         }
     }
 
+    // Bubble Sort
     public void bubbleSort() {
+        updateTimeComplexity("O(n)", "O(n²)", "O(n²)");
         sortThread = new Thread(() -> {
             for (int i = 0; i < array.length - 1; i++) {
                 for (int j = 0; j < array.length - i - 1; j++) {
@@ -63,11 +86,14 @@ public class SortingVisualizer extends JPanel {
                     }
                 }
             }
+            isSorted = true;
         });
         sortThread.start();
     }
 
+    // Selection Sort
     public void selectionSort() {
+        updateTimeComplexity("O(n²)", "O(n²)", "O(n²)");
         sortThread = new Thread(() -> {
             for (int i = 0; i < array.length - 1; i++) {
                 int minIdx = i;
@@ -79,11 +105,14 @@ public class SortingVisualizer extends JPanel {
                 }
                 swap(i, minIdx);
             }
+            isSorted = true;
         });
         sortThread.start();
     }
 
+    // Insertion Sort
     public void insertionSort() {
+        updateTimeComplexity("O(n)", "O(n²)", "O(n²)");
         sortThread = new Thread(() -> {
             for (int i = 1; i < array.length; i++) {
                 int key = array[i];
@@ -99,15 +128,26 @@ public class SortingVisualizer extends JPanel {
                 repaint();
                 sleep();
             }
+            isSorted = true;
         });
         sortThread.start();
     }
 
+    // Merge Sort
     public void mergeSort(int left, int right) {
+        updateTimeComplexity("O(n log n)", "O(n log n)", "O(n log n)");
+        sortThread = new Thread(() -> {
+            mergeSortHelper(left, right);
+            isSorted = true;
+        });
+        sortThread.start();
+    }
+
+    private void mergeSortHelper(int left, int right) {
         if (left < right) {
             int mid = left + (right - left) / 2;
-            mergeSort(left, mid);
-            mergeSort(mid + 1, right);
+            mergeSortHelper(left, mid);
+            mergeSortHelper(mid + 1, right);
             merge(left, mid, right);
         }
     }
@@ -132,11 +172,21 @@ public class SortingVisualizer extends JPanel {
         sleep();
     }
 
+    // Quick Sort
     public void quickSort(int low, int high) {
+        updateTimeComplexity("O(n log n)", "O(n log n)", "O(n²)");
+        sortThread = new Thread(() -> {
+            quickSortHelper(low, high);
+            isSorted = true;
+        });
+        sortThread.start();
+    }
+
+    private void quickSortHelper(int low, int high) {
         if (low < high) {
             int pi = partition(low, high);
-            quickSort(low, pi - 1);
-            quickSort(pi + 1, high);
+            quickSortHelper(low, pi - 1);
+            quickSortHelper(pi + 1, high);
         }
     }
 
@@ -153,129 +203,115 @@ public class SortingVisualizer extends JPanel {
         return i + 1;
     }
 
-    public void heapSort() {
-        int n = array.length;
-        for (int i = n / 2 - 1; i >= 0; i--) heapify(n, i);
-        for (int i = n - 1; i > 0; i--) {
-            swap(0, i);
-            heapify(i, 0);
-        }
-    }
-
-    private void heapify(int n, int i) {
-        int largest = i;
-        int left = 2 * i + 1;
-        int right = 2 * i + 2;
-
-        if (left < n && array[left] > array[largest]) largest = left;
-        if (right < n && array[right] > array[largest]) largest = right;
-
-        if (largest != i) {
-            swap(i, largest);
-            heapify(n, largest);
-        }
-    }
-
+    // Shuffle Array
     public void shuffleArray() {
         Random rand = new Random();
         for (int i = 0; i < array.length; i++) {
             int j = rand.nextInt(array.length);
             swap(i, j);
         }
+        isSorted = false;
         repaint();
     }
 
+    // Reset Array
     public void resetArray(int[] inputArray) {
         array = Arrays.copyOf(inputArray, inputArray.length);
         comparisons = 0;
         swaps = 0;
+        timeComplexity = "";
+        isSorted = false;
         repaint();
     }
 
-    // GUI Setup
+    // Method to update time complexity
+    public void updateTimeComplexity(String best, String avg, String worst) {
+        timeComplexity = String.format("Best: %s | Avg: %s | Worst: %s", best, avg, worst);
+        repaint();
+    }
+
+    // Main GUI
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Sorting Visualizer");
-        int[] defaultArray = generateRandomArray(30, 100);
-        SortingVisualizer sorter = new SortingVisualizer(defaultArray);
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Sorting Visualizer");
+            int[] userArray = getUserArray();
+            SortingVisualizer sorter = new SortingVisualizer(userArray);
+            frame.setLayout(new BorderLayout());
+            frame.add(sorter, BorderLayout.CENTER);
+            frame.setSize(900, 500);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Top panel with sorting buttons
-        JPanel topPanel = new JPanel();
-        String[] algorithms = {"Bubble", "Selection", "Insertion", "Merge", "Quick", "Heap"};
-        for (String algo : algorithms) {
-            JButton algoButton = new JButton(algo);
-            algoButton.addActionListener(e -> runAlgorithm(sorter, algo));
-            topPanel.add(algoButton);
-        }
+            // Top Control Panel
+            JPanel topPanel = new JPanel();
+            topPanel.setBackground(Color.DARK_GRAY);
+            topPanel.setLayout(new GridLayout(1, 5, 5, 5));
 
-        // Control panel with sliders, buttons, and array input
-        JPanel controlPanel = new JPanel();
-        JButton shuffleButton = new JButton("Shuffle");
-        JButton resetButton = new JButton("Reset");
-        JTextField arrayInput = new JTextField(20);
-        JButton setArrayButton = new JButton("Set Array");
-
-        JSlider speedSlider = new JSlider(1, 100, 50);
-        JSlider sizeSlider = new JSlider(5, 100, 30);
-
-        controlPanel.add(shuffleButton);
-        controlPanel.add(resetButton);
-        controlPanel.add(new JLabel("Speed:"));
-        controlPanel.add(speedSlider);
-        controlPanel.add(new JLabel("Size:"));
-        controlPanel.add(sizeSlider);
-        controlPanel.add(arrayInput);
-        controlPanel.add(setArrayButton);
-
-        // Event listeners
-        shuffleButton.addActionListener(e -> sorter.shuffleArray());
-        resetButton.addActionListener(e -> sorter.resetArray(defaultArray));
-        setArrayButton.addActionListener(e -> {
-            String input = arrayInput.getText();
-            String[] tokens = input.split(",");
-            int[] userArray = new int[tokens.length];
-            try {
-                for (int i = 0; i < tokens.length; i++) {
-                    userArray[i] = Integer.parseInt(tokens[i].trim());
-                }
-                sorter.resetArray(userArray);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Invalid input. Please enter numbers separated by commas.", "Error", JOptionPane.ERROR_MESSAGE);
+            String[] algorithms = {"Bubble", "Selection", "Insertion", "Merge", "Quick"};
+            for (String algo : algorithms) {
+                JButton algoButton = new JButton(algo);
+                algoButton.setForeground(Color.WHITE);
+                algoButton.setBackground(Color.BLACK);
+                algoButton.addActionListener(e -> runSort(algo, sorter));
+                topPanel.add(algoButton);
             }
+            frame.add(topPanel, BorderLayout.NORTH);
+
+            // Bottom Control Panel
+            JPanel bottomPanel = new JPanel();
+            JButton shuffleButton = new JButton("Shuffle Array");
+            JButton resetButton = new JButton("Reset");
+            JLabel speedLabel = new JLabel("Speed: ");
+            JSlider speedSlider = new JSlider(0, 100, 50);
+            JLabel barWidthLabel = new JLabel("Bar Width: ");
+            JSlider barWidthSlider = new JSlider(5, 50, 10);
+
+            // Listeners
+            speedSlider.addChangeListener(e -> sorter.delay = 100 - speedSlider.getValue());
+            barWidthSlider.addChangeListener(e -> {
+                sorter.barWidth = barWidthSlider.getValue();
+                sorter.repaint();
+            });
+            shuffleButton.addActionListener(e -> sorter.shuffleArray());
+            resetButton.addActionListener(e -> sorter.resetArray(userArray));
+
+            bottomPanel.add(shuffleButton);
+            bottomPanel.add(resetButton);
+            bottomPanel.add(speedLabel);
+            bottomPanel.add(speedSlider);
+            bottomPanel.add(barWidthLabel);
+            bottomPanel.add(barWidthSlider);
+
+            frame.add(bottomPanel, BorderLayout.SOUTH);
+            frame.setVisible(true);
         });
-
-        speedSlider.addChangeListener(e -> sorter.delay = 101 - speedSlider.getValue());
-        sizeSlider.addChangeListener(e -> {
-            int size = sizeSlider.getValue();
-            sorter.resetArray(generateRandomArray(size, 100));
-        });
-
-        frame.setLayout(new BorderLayout());
-        frame.add(topPanel, BorderLayout.NORTH);
-        frame.add(sorter, BorderLayout.CENTER);
-        frame.add(controlPanel, BorderLayout.SOUTH);
-
-        frame.setSize(800, 500);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
     }
 
-    private static void runAlgorithm(SortingVisualizer sorter, String algo) {
+    // Get user input through GUI
+    public static int[] getUserArray() {
+        String input = JOptionPane.showInputDialog(null, "Enter numbers to sort (comma separated):", "Array Input", JOptionPane.PLAIN_MESSAGE);
+        if (input == null || input.isEmpty()) {
+            return new int[]{8, 5, 3, 9, 4, 1, 7, 6, 2}; // Default array
+        }
+        String[] tokens = input.split(",");
+        int[] userArray = new int[tokens.length];
+        for (int i = 0; i < tokens.length; i++) {
+            userArray[i] = Integer.parseInt(tokens[i].trim());
+        }
+        return userArray;
+    }
+
+    // Run sorting based on selected algorithm
+    public static void runSort(String algo, SortingVisualizer sorter) {
+        if (sorter.isSorted) {
+            JOptionPane.showMessageDialog(null, "Array is already sorted! Shuffle or reset to re-sort.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         switch (algo) {
-            case "Bubble": sorter.bubbleSort(); break;
-            case "Selection": sorter.selectionSort(); break;
-            case "Insertion": sorter.insertionSort(); break;
-            case "Merge": sorter.mergeSort(0, sorter.array.length - 1); break;
-            case "Quick": sorter.quickSort(0, sorter.array.length - 1); break;
-            case "Heap": sorter.heapSort(); break;
+            case "Bubble" -> sorter.bubbleSort();
+            case "Selection" -> sorter.selectionSort();
+            case "Insertion" -> sorter.insertionSort();
+            case "Merge" -> sorter.mergeSort(0, sorter.array.length - 1);
+            case "Quick" -> sorter.quickSort(0, sorter.array.length - 1);
         }
-    }
-
-    private static int[] generateRandomArray(int size, int maxValue) {
-        Random rand = new Random();
-        int[] array = new int[size];
-        for (int i = 0; i < size; i++) {
-            array[i] = rand.nextInt(maxValue) + 1;
-        }
-        return array;
     }
 }
