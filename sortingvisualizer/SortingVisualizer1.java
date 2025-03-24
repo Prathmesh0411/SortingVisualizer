@@ -5,7 +5,7 @@ import javax.swing.event.*;
 import java.util.Arrays;
 import java.util.Random;
 
-public class SortingVisualizer extends JPanel {
+public class SortingVisualizer1 extends JPanel {
     private int[] array;
     private int delay = 50;
     private int barWidth = 10;
